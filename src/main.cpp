@@ -471,6 +471,8 @@ int main(int argc, char *argv[])
             appendPkexecEnvironmentVariable(pkexecArgs, "XDG_SESSION_TYPE");
             appendPkexecEnvironmentVariable(pkexecArgs, "DBUS_SESSION_BUS_ADDRESS");
             appendPkexecEnvironmentVariable(pkexecArgs, "QT_QPA_PLATFORM");
+            appendPkexecEnvironmentVariable(pkexecArgs, "GDK_BACKEND");
+            appendPkexecEnvironmentVariable(pkexecArgs, "WEBKIT_DISABLE_COMPOSITING_MODE");
             pkexecArgs << QCoreApplication::applicationFilePath();
             pkexecArgs << args;
 
@@ -512,6 +514,8 @@ int main(int argc, char *argv[])
             appendPkexecEnvironmentVariable(pkexecArgs, "XDG_SESSION_TYPE");
             appendPkexecEnvironmentVariable(pkexecArgs, "DBUS_SESSION_BUS_ADDRESS");
             appendPkexecEnvironmentVariable(pkexecArgs, "QT_QPA_PLATFORM");
+            appendPkexecEnvironmentVariable(pkexecArgs, "GDK_BACKEND");
+            appendPkexecEnvironmentVariable(pkexecArgs, "WEBKIT_DISABLE_COMPOSITING_MODE");
             if (usedPassword) {
                 pkexecArgs << (QStringLiteral("SEB_PASSWORD=") + userPassword);
             }
