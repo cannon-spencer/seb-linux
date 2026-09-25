@@ -230,6 +230,16 @@ void applyProtectedSessionSettings(
 
 void applyEarlyEnvironment(int argc, char *argv[])
 {
+    if (qgetenv("GDK_BACKEND").isEmpty()) {
+        qputenv("GDK_BACKEND", "x11");
+    }
+    if (qgetenv("QT_QPA_PLATFORM").isEmpty()) {
+        qputenv("QT_QPA_PLATFORM", "xcb");
+    }
+    if (qgetenv("WEBKIT_DISABLE_COMPOSITING_MODE").isEmpty()) {
+        qputenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    }
+
     seb::SebSettings settings = seb::defaultSettings();
     const QString configPath = findConfigPath(argc, argv);
     const bool hasResource = !configPath.isEmpty();
