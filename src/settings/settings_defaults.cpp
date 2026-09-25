@@ -62,7 +62,7 @@ SebSettings createDefaultSettings()
     settings.browser.proxy.policy = ProxyPolicy::System;
     settings.browser.resetOnQuitUrl = false;
     settings.browser.showFileSystemElementPath = true;
-    settings.browser.startUrl = QStringLiteral("https://www.safeexambrowser.org/start");
+    settings.browser.startUrl = QStringLiteral("https://elearning.ufl.edu/");
     settings.browser.useCustomUserAgent = false;
     settings.browser.useIsolatedClipboard = true;
     settings.browser.useQueryParameter = false;
