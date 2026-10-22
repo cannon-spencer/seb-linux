@@ -232,7 +232,7 @@ void applyEarlyEnvironment(int argc, char *argv[])
 {
     // Cage already owns the display. Forcing x11, linuxfb, or software
     // compositing here drops the PowerVR GLES path.
-    const bool inCage = !qgetenv("SEB_IN_CAGE").isNull();
+    const bool inCage = qEnvironmentVariableIsSet("SEB_IN_CAGE");
     if (!inCage) {
         if (qgetenv("GDK_BACKEND").isEmpty()) {
             qputenv("GDK_BACKEND", "x11");
