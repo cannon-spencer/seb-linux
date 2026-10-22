@@ -230,14 +230,19 @@ void applyProtectedSessionSettings(
 
 void applyEarlyEnvironment(int argc, char *argv[])
 {
-    if (qgetenv("GDK_BACKEND").isEmpty()) {
-        qputenv("GDK_BACKEND", "x11");
-    }
-    if (qgetenv("QT_QPA_PLATFORM").isEmpty()) {
-        qputenv("QT_QPA_PLATFORM", "xcb");
-    }
-    if (qgetenv("WEBKIT_DISABLE_COMPOSITING_MODE").isEmpty()) {
-        qputenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    // Cage already owns the display. Forcing x11, linuxfb, or software
+    // compositing here drops the PowerVR GLES path.
+    const bool inCage = !qgetenv("SEB_IN_CAGE").isNull();
+    if (!inCage) {
+        if (qgetenv("GDK_BACKEND").isEmpty()) {
+            qputenv("GDK_BACKEND", "x11");
+        }
+        if (qgetenv("QT_QPA_PLATFORM").isEmpty()) {
+            qputenv("QT_QPA_PLATFORM", "xcb");
+        }
+        if (qgetenv("WEBKIT_DISABLE_COMPOSITING_MODE").isEmpty()) {
+            qputenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
     }
 
     seb::SebSettings settings = seb::defaultSettings();
@@ -253,7 +258,7 @@ void applyEarlyEnvironment(int argc, char *argv[])
     }
 
     if (isExamAntiCheat || isMenuLockdown) {
-        if (isMenuLockdown || (isExamAntiCheat && hasResource)) {
+        if (!inCage && (isMenuLockdown || (isExamAntiCheat && hasResource))) {
             if (!setup_barebones_vt()) {
                 qCritical() << "Anti-cheat VT setup failed; aborting.";
                 _exit(1);
@@ -482,6 +487,9 @@ int main(int argc, char *argv[])
             appendPkexecEnvironmentVariable(pkexecArgs, "DBUS_SESSION_BUS_ADDRESS");
             appendPkexecEnvironmentVariable(pkexecArgs, "QT_QPA_PLATFORM");
             appendPkexecEnvironmentVariable(pkexecArgs, "GDK_BACKEND");
+            appendPkexecEnvironmentVariable(pkexecArgs, "GDK_GL");
+            appendPkexecEnvironmentVariable(pkexecArgs, "MESA_LOADER_DRIVER_OVERRIDE");
+            appendPkexecEnvironmentVariable(pkexecArgs, "SEB_IN_CAGE");
             appendPkexecEnvironmentVariable(pkexecArgs, "WEBKIT_DISABLE_COMPOSITING_MODE");
             pkexecArgs << QCoreApplication::applicationFilePath();
             pkexecArgs << args;
@@ -525,6 +533,9 @@ int main(int argc, char *argv[])
             appendPkexecEnvironmentVariable(pkexecArgs, "DBUS_SESSION_BUS_ADDRESS");
             appendPkexecEnvironmentVariable(pkexecArgs, "QT_QPA_PLATFORM");
             appendPkexecEnvironmentVariable(pkexecArgs, "GDK_BACKEND");
+            appendPkexecEnvironmentVariable(pkexecArgs, "GDK_GL");
+            appendPkexecEnvironmentVariable(pkexecArgs, "MESA_LOADER_DRIVER_OVERRIDE");
+            appendPkexecEnvironmentVariable(pkexecArgs, "SEB_IN_CAGE");
             appendPkexecEnvironmentVariable(pkexecArgs, "WEBKIT_DISABLE_COMPOSITING_MODE");
             if (usedPassword) {
                 pkexecArgs << (QStringLiteral("SEB_PASSWORD=") + userPassword);
