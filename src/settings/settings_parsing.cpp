@@ -1,6 +1,8 @@
 #include "settings_parsing.h"
 
 #include <QCryptographicHash>
+#include <QDateTime>
+#include <QLocale>
 #include <QDomDocument>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -11,36 +13,107 @@
 
 #include <zlib.h>
 
+#include <algorithm>
+
 namespace seb::settingsinternal {
 namespace {
 
-QJsonValue toJsonValue(const QVariant &value)
+// ----- SEB-JSON (Config Key input) -------------------------------------------
+//
+// https://safeexambrowser.org/developer/seb-config-key.html
+// Keys sorted case-insensitively (lowercase first on ties), recursively;
+// originatorVersion removed at the root; empty dictionaries dropped; no
+// whitespace; no escaping of '/', '\' or non-ASCII; data as base64; dates
+// as ISO 8601. Checked against Config Keys of files saved by SEB itself.
+
+bool isEmptyMap(const QVariant &value)
 {
-    if (!value.isValid()) return {};
+    return value.metaType().id() == QMetaType::QVariantMap && value.toMap().isEmpty();
+}
 
-    if (value.metaType().id() == QMetaType::QVariantMap) {
-        QJsonObject object;
-        const QVariantMap map = value.toMap();
-        for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
-            object.insert(it.key(), toJsonValue(it.value()));
+void appendSebJsonString(QString &out, const QString &text)
+{
+    out += QLatin1Char('"');
+    for (const QChar c : text) {
+        switch (c.unicode()) {
+        case '"': out += QStringLiteral("\\\""); break;
+        case '\n': out += QStringLiteral("\\n"); break;
+        case '\r': out += QStringLiteral("\\r"); break;
+        case '\t': out += QStringLiteral("\\t"); break;
+        default:
+            if (c.unicode() < 0x20) {
+                out += QStringLiteral("\\u%1").arg(c.unicode(), 4, 16, QLatin1Char('0'));
+            } else {
+                out += c;
+            }
         }
-        return object;
     }
+    out += QLatin1Char('"');
+}
 
-    if (value.metaType().id() == QMetaType::QVariantList) {
-        QJsonArray array;
-        const QVariantList list = value.toList();
-        for (const QVariant &item : list) {
-            array.push_back(toJsonValue(item));
+void appendSebJson(QString &out, const QVariant &value);
+
+void appendSebJsonMap(QString &out, const QVariantMap &map)
+{
+    QStringList keys;
+    for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+        if (!isEmptyMap(it.value())) keys << it.key();
+    }
+    std::sort(keys.begin(), keys.end(), [](const QString &a, const QString &b) {
+        const int ci = QString::compare(a, b, Qt::CaseInsensitive);
+        return ci != 0 ? ci < 0 : QString::compare(a, b, Qt::CaseSensitive) > 0;
+    });
+    out += QLatin1Char('{');
+    for (qsizetype i = 0; i < keys.size(); ++i) {
+        if (i > 0) out += QLatin1Char(',');
+        appendSebJsonString(out, keys.at(i));
+        out += QLatin1Char(':');
+        appendSebJson(out, map.value(keys.at(i)));
+    }
+    out += QLatin1Char('}');
+}
+
+void appendSebJson(QString &out, const QVariant &value)
+{
+    switch (value.metaType().id()) {
+    case QMetaType::QVariantMap:
+        appendSebJsonMap(out, value.toMap());
+        return;
+    case QMetaType::QVariantList: {
+        out += QLatin1Char('[');
+        bool first = true;
+        for (const QVariant &item : value.toList()) {
+            if (isEmptyMap(item)) continue;
+            if (!first) out += QLatin1Char(',');
+            first = false;
+            appendSebJson(out, item);
         }
-        return array;
+        out += QLatin1Char(']');
+        return;
     }
-
-    if (value.metaType().id() == QMetaType::QByteArray) {
-        return QString::fromLatin1(value.toByteArray().toBase64());
+    case QMetaType::Bool:
+        out += value.toBool() ? QStringLiteral("true") : QStringLiteral("false");
+        return;
+    case QMetaType::Int:
+    case QMetaType::UInt:
+    case QMetaType::LongLong:
+    case QMetaType::ULongLong:
+        out += QString::number(value.toLongLong());
+        return;
+    case QMetaType::Double:
+        // Shortest representation that round-trips: 0.10000000000000001 -> 0.1.
+        out += QString::number(value.toDouble(), 'g', QLocale::FloatingPointShortest);
+        return;
+    case QMetaType::QByteArray:
+        appendSebJsonString(out, QString::fromLatin1(value.toByteArray().toBase64()));
+        return;
+    case QMetaType::QDateTime:
+        appendSebJsonString(out, value.toDateTime().toUTC().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss+00:00")));
+        return;
+    default:
+        appendSebJsonString(out, value.toString());
+        return;
     }
-
-    return QJsonValue::fromVariant(value);
 }
 
 QString sha256Hex(const QByteArray &data)
@@ -91,15 +164,27 @@ QVariant parsePlistElement(const QDomElement &element)
         return ok ? QVariant(value) : QVariant(element.text().trimmed());
     }
     if (tag == "data") return QByteArray::fromBase64(element.text().trimmed().toUtf8());
+    if (tag == "date") {
+        const QDateTime when = QDateTime::fromString(element.text().trimmed(), Qt::ISODate);
+        if (when.isValid()) return when;
+    }
     return element.text();
 }
 
 }  // namespace
 
+QString sebJson(const QVariantMap &data)
+{
+    QVariantMap root = data;
+    root.remove(QStringLiteral("originatorVersion"));
+    QString out;
+    appendSebJsonMap(out, root);
+    return out;
+}
+
 QString calculateConfigurationKey(const QVariantMap &data)
 {
-    const QJsonObject object = toJsonValue(data).toObject();
-    return sha256Hex(QJsonDocument(object).toJson(QJsonDocument::Compact));
+    return sha256Hex(sebJson(data).toUtf8());
 }
 
 QByteArray inflateGzip(const QByteArray &data, QString *error)

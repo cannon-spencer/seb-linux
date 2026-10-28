@@ -15,6 +15,12 @@ public:
 
     void interceptRequest(contracts::IRequest &request) override;
 
+    // For engines that cannot call interceptRequest() per request (WebKitGTK
+    // filters and adds headers in its web process extension).
+    const seb::SebSettings &settings() const { return settings_; }
+    QString configurationKey() const { return settings_.browser.configurationKey; }
+    QString browserExamKey() const { return keyGenerator_.browserExamKey(); }
+
 private:
     bool shouldAppendHeaders(const contracts::IRequest &request) const;
     static bool sameHost(const QUrl &lhs, const QUrl &rhs);

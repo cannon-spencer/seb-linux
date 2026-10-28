@@ -17,9 +17,9 @@ public:
 
     QByteArray configurationKeyHash(const QUrl &url) const;
     QByteArray requestHash(const QUrl &url) const;
+    QString browserExamKey() const;
 
 private:
-    QString browserExamKey() const;
     QString buildVersion() const;
     QString codeSignatureHash() const;
     QString executableHash() const;

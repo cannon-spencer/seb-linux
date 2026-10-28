@@ -25,6 +25,10 @@ public:
 
     FilterDecision evaluate(const QUrl &url, contracts::ResourceType resourceType) const;
 
+    // Regex source a rule is matched with (case-insensitively). Used to hand
+    // the same rules to the WebKitGTK web process extension.
+    static QString patternFor(const seb::FilterRuleSettings &rule);
+
 private:
     struct CompiledRule
     {

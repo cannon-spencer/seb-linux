@@ -1,4 +1,5 @@
 #include "webkitgtk_view.h"
+#include "webkitgtk_profile.h"
 
 #if !SEB_HAS_QTWEBENGINE && SEB_HAS_WEBKITGTK
 
@@ -76,7 +77,15 @@ WebKitGtkWebView::WebKitGtkWebView(WebKitGtkProfile *profile, QWidget *parent)
 
   ensureGtkPump();
 
-  d->webView = webkit_web_view_new();
+  // Use the profile's context: it carries the SEB web process extension
+  // (URL filter, key headers, JS API).
+  d->webView = profile && profile->context()
+                   ? webkit_web_view_new_with_context(profile->context())
+                   : webkit_web_view_new();
+  if (profile && !profile->userAgent().isEmpty()) {
+    WebKitSettings *settings = webkit_web_view_get_settings(WEBKIT_WEB_VIEW(d->webView));
+    webkit_settings_set_user_agent(settings, profile->userAgent().toUtf8().constData());
+  }
 
   d->gtkWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_decorated(GTK_WINDOW(d->gtkWindow), FALSE);

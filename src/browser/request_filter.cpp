@@ -33,16 +33,14 @@ RequestFilter::RequestFilter(const seb::FilterSettings &settings)
     }
 }
 
+QString RequestFilter::patternFor(const seb::FilterRuleSettings &rule)
+{
+    return rule.type == seb::FilterRuleType::Regex ? rule.expression : wildcardToRegexPattern(rule.expression);
+}
+
 QRegularExpression RequestFilter::compileRule(const seb::FilterRuleSettings &rule)
 {
-    switch (rule.type) {
-    case seb::FilterRuleType::Regex:
-        return QRegularExpression(rule.expression, QRegularExpression::CaseInsensitiveOption);
-    case seb::FilterRuleType::Simplified:
-        return QRegularExpression(wildcardToRegexPattern(rule.expression), QRegularExpression::CaseInsensitiveOption);
-    }
-
-    return {};
+    return QRegularExpression(patternFor(rule), QRegularExpression::CaseInsensitiveOption);
 }
 
 FilterDecision RequestFilter::evaluate(const QUrl &url, contracts::ResourceType resourceType) const
