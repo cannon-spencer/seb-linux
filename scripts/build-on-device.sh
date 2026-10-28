@@ -28,3 +28,12 @@ file "$BIN" | grep -qiE 'riscv64|RISC-V' \
 cp "$BIN" "$OUT"
 chmod +x "$OUT"
 echo "wrote $OUT"
+
+# The WebKitGTK extension (URL filter, SEB key headers, JS API) is looked up
+# in webkit-extensions/ next to the binary. SEB refuses to start an exam
+# without it.
+EXT="$ROOT/build/bin/webkit-extensions/libseb-web-extension.so"
+[[ -f "$EXT" ]] || { echo "error: missing $EXT" >&2; exit 1; }
+mkdir -p "$(dirname "$OUT")/webkit-extensions"
+cp "$EXT" "$(dirname "$OUT")/webkit-extensions/"
+echo "wrote $(dirname "$OUT")/webkit-extensions/libseb-web-extension.so"

@@ -423,3 +423,20 @@ examples.files = examples/minimal-config.json
 examples.path = /usr/share/doc/safe-exam-browser/examples
 
 INSTALLS += target desktop mime metainfo icon icon64 examples
+
+
+# WebKitGTK web process extension (URL filter, SEB key headers, JS API).
+# Built as a plain shared library next to the binary:
+#   bin/webkit-extensions/libseb-web-extension.so
+equals(seb_has_webkitgtk, 1) {
+    SEB_WEBEXT_SRC = $$PWD/src/browser/engines/webkitgtk/extension/seb_web_extension.c
+    SEB_WEBEXT_OUT = $$DESTDIR/webkit-extensions/libseb-web-extension.so
+    sebwebext.target = $$SEB_WEBEXT_OUT
+    sebwebext.depends = $$SEB_WEBEXT_SRC
+    sebwebext.commands = mkdir -p $$DESTDIR/webkit-extensions && \
+        $$QMAKE_CC -shared -fPIC -O2 -Wall -Wextra -o $$SEB_WEBEXT_OUT $$SEB_WEBEXT_SRC \
+        `pkg-config --cflags --libs webkit2gtk-web-extension-4.1`
+    QMAKE_EXTRA_TARGETS += sebwebext
+    PRE_TARGETDEPS += $$SEB_WEBEXT_OUT
+    QMAKE_CLEAN += $$SEB_WEBEXT_OUT
+}

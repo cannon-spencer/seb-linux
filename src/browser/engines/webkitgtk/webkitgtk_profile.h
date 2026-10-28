@@ -5,6 +5,8 @@
 
 #include "browser/contracts/i_webprofile.h"
 
+typedef struct _WebKitWebContext WebKitWebContext;
+
 namespace seb::browser {
 
 class WebKitGtkProfile : public contracts::IWebProfile {
@@ -27,6 +29,11 @@ public:
   void setUrlRequestInterceptor(
       seb::browser::contracts::IRequestInterceptor *interceptor) override;
   void deleteAllCookies() override;
+
+  // Shared by every view of this profile, so they all load the SEB web
+  // process extension with the same configuration.
+  WebKitWebContext *context() const;
+  QString userAgent() const;
 
 private:
   class Private;
