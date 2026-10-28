@@ -280,7 +280,18 @@ unwrapSebContainer(QByteArray raw, QString *error, QStringList *warnings,
     }
 
     if (prefix == kPrefixPlain) {
-      return raw.mid(kSebPrefixLength);
+      // "plnd" data is gzip-compressed XML (SEB file format spec), same as
+      // the payload inside a decrypted "pswd" block.
+      QByteArray plain = raw.mid(kSebPrefixLength);
+      if (plain.size() >= 2 && static_cast<unsigned char>(plain.at(0)) == 0x1f &&
+          static_cast<unsigned char>(plain.at(1)) == 0x8b) {
+        QString inflateError;
+        plain = inflateGzip(plain, &inflateError);
+        if (plain.isEmpty() && error) {
+          *error = inflateError;
+        }
+      }
+      return plain;
     }
 
     if (prefix == kPrefixPassword || prefix == kPrefixPasswordConfigureClient) {

@@ -5,6 +5,8 @@
 
 namespace seb::settingsinternal {
 
+// SEB-JSON string the Config Key is hashed from (exposed for tests).
+QString sebJson(const QVariantMap &data);
 QString calculateConfigurationKey(const QVariantMap &data);
 QByteArray inflateGzip(const QByteArray &data, QString *error);
 QVariantMap parseJson(const QByteArray &raw, QString *error);
